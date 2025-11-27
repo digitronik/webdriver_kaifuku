@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from copy import copy
 from typing import Callable, ClassVar
 from urllib.error import URLError
 from urllib.parse import urlparse
@@ -14,10 +13,10 @@ from selenium.common.exceptions import UnexpectedAlertPresentException, WebDrive
 from selenium.webdriver.remote.file_detector import UselessFileDetector
 from selenium.webdriver.remote.webdriver import WebDriver
 
+from .base import BaseManager
 from .tries import tries
 
 log = logging.getLogger(__name__)
-
 
 THIRTY_SECONDS = 30
 
@@ -64,7 +63,7 @@ def _remove_deprecated_items(browser_conf: dict) -> dict:
 
 
 @define(auto_attribs=True)
-class BrowserFactory:
+class SeleniumFactory:
     ALLOWED_KWARGS: ClassVar[list[str]] = ["command_executor", "options", "keep_alive"]
     webdriver_class: type
     webdriver_kwargs: dict
@@ -106,8 +105,8 @@ class BrowserFactory:
 
 
 @define(auto_attribs=True)
-class BrowserManager:
-    browser_factory: BrowserFactory
+class SeleniumManager(BaseManager):
+    browser_factory: SeleniumFactory
     browser: WebDriver | None = field(default=None, init=False)
 
     @staticmethod
@@ -158,8 +157,7 @@ class BrowserManager:
         return opts
 
     @classmethod
-    def from_conf(cls, browser_conf: dict) -> BrowserManager:
-        browser_conf = copy(browser_conf)
+    def from_conf(cls, browser_conf: dict) -> SeleniumManager:
         browser_conf = _remove_deprecated_items(browser_conf)
 
         log.debug(browser_conf)
@@ -186,7 +184,7 @@ class BrowserManager:
 
         if webdriver_class in TRUSTED_WEB_DRIVERS and "command_executor" in browser_conf:
             webdriver_kwargs["command_executor"] = browser_conf["command_executor"]
-        return cls(BrowserFactory(webdriver_class, webdriver_kwargs))
+        return cls(SeleniumFactory(webdriver_class, webdriver_kwargs))
 
     @property
     def is_alive(self) -> bool:
@@ -209,7 +207,7 @@ class BrowserManager:
             assert self.browser is not None
             return self.browser
         else:
-            return self.start()
+            return self.recover()
 
     def add_cleanup(self, callback: Callable) -> None:
         assert self.browser is not None
