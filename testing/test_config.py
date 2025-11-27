@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from webdriver_kaifuku import BrowserManager
 
+from webdriver_kaifuku import BrowserManager
 
 CONFIGS = [
     pytest.param(

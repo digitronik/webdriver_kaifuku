@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 
 import requests
+
 from webdriver_kaifuku import BrowserManager
 
 

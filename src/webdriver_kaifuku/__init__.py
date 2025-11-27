@@ -1,18 +1,16 @@
 """Core functionality for starting, restarting, and stopping a selenium browser."""
+
 from __future__ import annotations
 
 import logging
 from copy import copy
-from typing import Callable
-from typing import ClassVar
+from typing import Callable, ClassVar
 from urllib.error import URLError
 from urllib.parse import urlparse
 
-from attrs import define
-from attrs import field
+from attrs import define, field
 from selenium import webdriver
-from selenium.common.exceptions import UnexpectedAlertPresentException
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import UnexpectedAlertPresentException, WebDriverException
 from selenium.webdriver.remote.file_detector import UselessFileDetector
 from selenium.webdriver.remote.webdriver import WebDriver
 
