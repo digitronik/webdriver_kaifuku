@@ -29,6 +29,13 @@ jobs:
     - name: Pull selenium image
       run: podman pull quay.io/redhatqe/selenium-standalone:latest
 
+    - name: Pull playwright image and install playwright
+      run: |
+        python -m pip install playwright
+        playwright install --with-deps
+        PLAYWRIGHT_VERSION=$(python -c "from importlib.metadata import version; print(version('playwright'))")
+        podman pull docker.io/digitronik/playwright-vnc:${PLAYWRIGHT_VERSION}
+
     - name: Tests - Python-${{ matrix.python-version }}
       run: |
         python -m pip install --upgrade pip

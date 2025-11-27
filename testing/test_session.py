@@ -4,10 +4,12 @@ import subprocess
 
 import requests
 
-from webdriver_kaifuku import BrowserManager
+from webdriver_kaifuku import PlaywrightManager, SeleniumManager
+from webdriver_kaifuku.base import BaseManager
 
 
-def test_open_close(test_data: tuple[BrowserManager, str]):
+def test_selenium_open_close(test_data: tuple[BaseManager, str]):
+    """Test Selenium browser open/close/restart."""
     manager, _ = test_data
     driver = manager.ensure_open()
     driver2 = manager.ensure_open()
@@ -16,8 +18,21 @@ def test_open_close(test_data: tuple[BrowserManager, str]):
     assert driver3 is not driver2
 
 
-def test_session(test_data: tuple[BrowserManager, str], selenium_container: str):
+def test_playwright_open_close(playwright_test_data: tuple[BaseManager, str]):
+    """Test Playwright browser open/close/restart."""
+    manager, _ = playwright_test_data
+    page = manager.ensure_open()
+    page2 = manager.ensure_open()
+    assert page is page2
+    page3 = manager.start()
+    assert page3 is not page2
+
+
+def test_selenium_session(test_data: tuple[BaseManager, str], selenium_container: str):
+    """Test Selenium-specific session capabilities."""
     manager, browser_name = test_data
+    assert isinstance(manager, SeleniumManager)
+
     driver = manager.ensure_open()
     r = requests.get("http://localhost:4444/status")
     assert r.ok
@@ -42,7 +57,6 @@ def test_session(test_data: tuple[BrowserManager, str], selenium_container: str)
             [
                 "podman",
                 "exec",
-                "-it",
                 selenium_container,
                 "bash",
                 "-c",
@@ -59,3 +73,69 @@ def test_session(test_data: tuple[BrowserManager, str], selenium_container: str)
             and "--proxy-server=example.com:8080" in c
         ]
         assert chrome
+
+
+def test_playwright_session(playwright_test_data: tuple[BaseManager, str]):
+    """Test Playwright remote session capabilities."""
+    manager, browser_name = playwright_test_data
+    assert isinstance(manager, PlaywrightManager)
+
+    page = manager.ensure_open()
+    assert not page.is_closed()
+
+    context = page.context
+    browser = context.browser
+    assert browser is not None
+
+    expected_browser = "chromium" if browser_name == "chrome" else browser_name
+    assert browser.browser_type.name == expected_browser
+
+    page.goto("https://example.com")
+    assert "example.com" in page.url
+    assert "Example Domain" in page.title()
+
+    if browser_name == "chromium":
+        assert manager.config["context_options"]["ignore_https_errors"] is True
+
+
+def test_playwright_local_open_close(playwright_local_test_data: tuple[BaseManager, str]):
+    """Test local Playwright browser open/close/restart."""
+    manager, _ = playwright_local_test_data
+    page = manager.ensure_open()
+    page2 = manager.ensure_open()
+    assert page is page2
+    page3 = manager.start()
+    assert page3 is not page2
+
+
+def test_playwright_local_session(playwright_local_test_data: tuple[BaseManager, str]):
+    """Test local Playwright session capabilities."""
+    manager, browser_name = playwright_local_test_data
+    assert isinstance(manager, PlaywrightManager)
+
+    page = manager.ensure_open()
+    assert not page.is_closed()
+
+    page.goto("https://example.com")
+    assert "example.com" in page.url
+    assert "Example Domain" in page.title()
+
+
+def test_playwright_recovery(playwright_test_data: tuple[BaseManager, str]):
+    """Test Playwright recovery mechanism."""
+    manager, browser_name = playwright_test_data
+    assert isinstance(manager, PlaywrightManager)
+
+    page = manager.ensure_open()
+    page.goto("https://example.com")
+    assert "example.com" in page.url
+
+    page.close()
+    assert page.is_closed()
+
+    page2 = manager.ensure_open()
+    assert page2 is not page
+    assert not page2.is_closed()
+
+    page2.goto("https://example.com")
+    assert "example.com" in page2.url
